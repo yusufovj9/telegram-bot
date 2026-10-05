@@ -71,6 +71,22 @@ def main():
 
     print("Bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
-
-if __name__ == '__main__':
+if __name__ == '__main__': 
     main()
+import os
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot ishlamoqda")
+
+def run_port_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    server.serve_forever()
+
+# Buni main() funksiyangiz ichiga, polling boshlanishidan oldingi qatorga qo'ying:
+threading.Thread(target=run_port_server, daemon=True).start()
