@@ -11,55 +11,73 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Render portini ushlab turish uchun HTTP server
+# Render so'rovlarini (GET va HEAD) to'liq qabul qiluvchi server
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
+        self.send_header("Content-type", "text/plain")
         self.end_headers()
         self.wfile.write(b"Bot is live")
+
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
 
 def run_http_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
     server.serve_forever()
 
-# Muhit o'zgaruvchilarini olish (.strip() ortiqcha \n va probellarni tozalaydi)
+# Muhit o'zgaruvchilarini olish
 BOT_TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
 TARGET_GROUP_1 = (os.getenv("TARGET_GROUP_1") or "").strip()
 TARGET_GROUP_2 = (os.getenv("TARGET_GROUP_2") or "").strip()
 
-async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = update.message
-    groups = [g for g in [TARGET_GROUP_1, TARGET_GROUP_2] if g]
-    
+    if not message:
+        return
+
+    # Guruh ID-larini yig'ish va songa aylantirish
+    raw_groups = [TARGET_GROUP_1, TARGET_GROUP_2]
+    groups = []
+    for g in raw_groups:
+        if g:
+            try:
+                groups.append(int(g))
+            except ValueError:
+                logging.error(f"Guruh ID son emas: {g}")
+
     if not groups:
         logging.warning("Guruh ID'lari topilmadi!")
         return
 
     for group_id in groups:
         try:
-            # Media turiga qarab guruhlarga yuborish
             if message.voice:
                 await context.bot.send_voice(chat_id=group_id, voice=message.voice.file_id)
             elif message.audio:
-                await context.bot.send_audio(chat_id=group_id, audio=message.audio.file_id)
+                await context.bot.send_audio(chat_id=group_id, audio=message.audio.file_id, caption=message.caption or "")
             elif message.photo:
                 await context.bot.send_photo(chat_id=group_id, photo=message.photo[-1].file_id, caption=message.caption or "")
             elif message.document:
                 await context.bot.send_document(chat_id=group_id, document=message.document.file_id, caption=message.caption or "")
-            logging.info(f"Xabar {group_id} guruhiga yuborildi.")
+            elif message.text:
+                await context.bot.send_message(chat_id=group_id, text=message.text)
+            
+            logging.info(f"Xabar {group_id} guruhiga muvaffaqiyatli yuborildi.")
         except Exception as e:
-            logging.error(f"{group_id} guruhiga yuborishda xatolik: {e}")
+            logging.error(f"{group_id} guruhiga yuborishda xatolik yuz berdi: {e}")
 
 def main():
-    # Web serverni alohida oqimda (thread) ishga tushirish
     threading.Thread(target=run_http_server, daemon=True).start()
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     
-    # Ovozli xabar, audio, rasm va hujjatlarni ushlab qolish
-    media_filter = filters.VOICE | filters.AUDIO | filters.PHOTO | filters.Document.ALL
-    app.add_handler(MessageHandler(media_filter, handle_media))
+    # Barcha turdagi xabarlarni ushlash
+    all_filters = filters.ALL & (~filters.COMMAND)
+    app.add_handler(MessageHandler(all_filters, handle_message))
 
     logging.info("Bot muvaffaqiyatli ishga tushdi...")
     app.run_polling()
