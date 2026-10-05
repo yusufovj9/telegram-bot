@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Render so'rovlarini (GET va HEAD) to'liq qabul qiluvchi server
+# Render portini ushlab turuvchi server (GET va HEAD so'rovlari uchun)
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -39,7 +39,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not message:
         return
 
-    # Guruh ID-larini yig'ish va songa aylantirish
+    # Guruh ID-larini songa aylantirish
     raw_groups = [TARGET_GROUP_1, TARGET_GROUP_2]
     groups = []
     for g in raw_groups:
@@ -53,34 +53,38 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.warning("Guruh ID'lari topilmadi!")
         return
 
+    caption_text = message.caption if message.caption else ""
+
     for group_id in groups:
         try:
+            # 1. Ovozli xabar (Voice)
             if message.voice:
-                await context.bot.send_voice(chat_id=group_id, voice=message.voice.file_id)
+                await context.bot.send_voice(chat_id=group_id, voice=message.voice.file_id, caption=caption_text)
+            
+            # 2. Audio / Musiqa (MP3)
             elif message.audio:
-                await context.bot.send_audio(chat_id=group_id, audio=message.audio.file_id, caption=message.caption or "")
+                await context.bot.send_audio(chat_id=group_id, audio=message.audio.file_id, caption=caption_text)
+            
+            # 3. Rasm (Photo)
             elif message.photo:
-                await context.bot.send_photo(chat_id=group_id, photo=message.photo[-1].file_id, caption=message.caption or "")
+                await context.bot.send_photo(chat_id=group_id, photo=message.photo[-1].file_id, caption=caption_text)
+            
+            # 4. Video (Oddiy video)
+            elif message.video:
+                await context.bot.send_video(chat_id=group_id, video=message.video.file_id, caption=caption_text)
+            
+            # 5. Video note (Aylana/Krugloshka video)
+            elif message.video_note:
+                await context.bot.send_video_note(chat_id=group_id, video_note=message.video_note.file_id)
+            
+            # 6. Hujjat / Fayl (Document)
             elif message.document:
-                await context.bot.send_document(chat_id=group_id, document=message.document.file_id, caption=message.caption or "")
+                await context.bot.send_document(chat_id=group_id, document=message.document.file_id, caption=caption_text)
+            
+            # 7. Matnli xabar (Text)
             elif message.text:
                 await context.bot.send_message(chat_id=group_id, text=message.text)
             
             logging.info(f"Xabar {group_id} guruhiga muvaffaqiyatli yuborildi.")
         except Exception as e:
-            logging.error(f"{group_id} guruhiga yuborishda xatolik yuz berdi: {e}")
-
-def main():
-    threading.Thread(target=run_http_server, daemon=True).start()
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    
-    # Barcha turdagi xabarlarni ushlash
-    all_filters = filters.ALL & (~filters.COMMAND)
-    app.add_handler(MessageHandler(all_filters, handle_message))
-
-    logging.info("Bot muvaffaqiyatli ishga tushdi...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+            logging.error(f"{group_id} guruhiga yuborishda x
