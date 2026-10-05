@@ -10,7 +10,7 @@ logging.basicConfig(
 )
 
 # Token va guruh ID'larini muhit o'zgaruvchilaridan (Environment Variables) olamiz
-BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+BOT_TOKEN = (os.getenv("TELEGRAM_BOT_TOKEN") or "").strip()
 TARGET_GROUP_1 = os.getenv("TARGET_GROUP_1")
 TARGET_GROUP_2 = os.getenv("TARGET_GROUP_2")
 
