@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Render so'rovlarini (GET va HEAD) to'liq qabul qiluvchi server
+# Render so'rovlarini (GET va HEAD) qabul qiluvchi HTTP server
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -73,7 +73,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif message.video:
                 await context.bot.send_video(chat_id=group_id, video=message.video.file_id, caption=caption_text)
             
-            # 5. Video note (Aylana/Krugloshka video)
+            # 5. Video note (Krugloshka video)
             elif message.video_note:
                 await context.bot.send_video_note(chat_id=group_id, video_note=message.video_note.file_id)
             
@@ -94,7 +94,7 @@ def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     
-    # Barcha turdagi xabarlarni ushlash
+    # Barcha xabarlarni ushlash
     all_filters = filters.ALL & (~filters.COMMAND)
     app.add_handler(MessageHandler(all_filters, handle_message))
 
@@ -102,4 +102,4 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    main()  logging.error(f"{group_id} guruhiga yuborishda x
+    main()
