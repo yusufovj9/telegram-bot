@@ -11,7 +11,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Render portini ushlab turuvchi server (GET va HEAD so'rovlari uchun)
+# Render so'rovlarini (GET va HEAD) to'liq qabul qiluvchi server
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -87,4 +87,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             logging.info(f"Xabar {group_id} guruhiga muvaffaqiyatli yuborildi.")
         except Exception as e:
-            logging.error(f"{group_id} guruhiga yuborishda x
+            logging.error(f"Xatolik yuz berdi: {e}")
+
+def main():
+    threading.Thread(target=run_http_server, daemon=True).start()
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    
+    # Barcha turdagi xabarlarni ushlash
+    all_filters = filters.ALL & (~filters.COMMAND)
+    app.add_handler(MessageHandler(all_filters, handle_message))
+
+    logging.info("Bot muvaffaqiyatli ishga tushdi...")
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()  logging.error(f"{group_id} guruhiga yuborishda x
